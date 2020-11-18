@@ -37,25 +37,9 @@ socketio = SocketIO(app)
 config = configparser.RawConfigParser()
 config.read('liquid.conf')
 
-rpcHost = config.get('LIQUID', 'host')
-rpcPort = config.get('LIQUID', 'port')
-rpcUser = config.get('LIQUID', 'username')
-rpcPassword = config.get('LIQUID', 'password')
-rpcPassphrase = config.get('LIQUID', 'passphrase')
-serverURL = 'http://{}:{}@{}:{}'.format(rpcUser, rpcPassword, rpcHost, rpcPort)
-
-myHost = config.get('MYSQL', 'host')
-myUser = config.get('MYSQL', 'username')
-myPasswd = config.get('MYSQL', 'password')
-myDatabase = config.get('MYSQL', 'database')
-
 secToken = config.get('SECURITY', 'token')
 secFixedGaid = config.get('SECURITY', 'fixedGaid')
 secAuthorizerAddress = config.get('SECURITY', 'authorizerAddress')
-
-betaToken = config.get('BETA', 'token')
-betaFixedGaid = config.get('BETA', 'fixedGaid')
-betaAuthorizerAddress = config.get('BETA', 'authorizerAddress')
 
 host = RPCHost(serverURL)
 if (len(rpcPassphrase) > 0):

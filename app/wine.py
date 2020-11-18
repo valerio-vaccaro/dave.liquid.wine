@@ -10,7 +10,7 @@
 #    MIT License - Valerio Vaccaro 2020
 #    Based on open source code
 
-from flask import Flask, request, send_from_directory
+from flask import Flask, request, send_from_directory, redirect, url_for
 from flask_stache import render_template
 from flask_qrcode import QRcode
 from flask_socketio import SocketIO
@@ -22,8 +22,10 @@ import json
 import requests
 import string
 import random
+import secrets
 import wallycore as wally
 from flask import jsonify
+from flask import session
 
 import numpy as np
 import pandas as pd
@@ -38,170 +40,42 @@ config = configparser.RawConfigParser()
 config.read('liquid.conf')
 
 secToken = config.get('SECURITY', 'token')
-secFixedGaid = config.get('SECURITY', 'fixedGaid')
-secAuthorizerAddress = config.get('SECURITY', 'authorizerAddress')
+secUuid = config.get('SECURITY', 'uuid')
+adminUsername = config.get('ADMIN', 'username')
+adminPassword = config.get('ADMIN', 'password')
 
-host = RPCHost(serverURL)
-if (len(rpcPassphrase) > 0):
-    result = host.call('walletpassphrase', rpcPassphrase, 60)
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        if request.form['username'] != adminUsername or request.form['password'] != adminPassword:
+            error = 'Invalid Credentials. Please try again.'
+        else:
+            session['logged_in'] = True
+            return redirect(url_for('utxos'))
+    return render_template('login', error=error)
 
-
-@app.route('/.well-known/<path:filename>')
-def wellKnownRoute(filename):
-    return send_from_directory('{}/well-known/'.format(app.root_path), filename, conditional=True)
-
-
-def parse_signed_request(request):
-    if not isinstance(request, dict) or \
-            set(request.keys()) != {'message', 'signature'} or \
-            not isinstance(request['message'], dict) or \
-            not isinstance(request['signature'], str):
-        return None, 'Unexpected formatting'
-
-    signature = request['signature']
-    message_dict = request['message']
-    message_str = json.dumps(message_dict, separators=(',', ':'), sort_keys=True).encode('ascii').decode()
-
-    response = host.call('verifymessage', secAuthorizerAddress, signature, message_str)
-    if not response:
-        return None, 'Invalid signature'
-
-    return message_dict, ''
-
-
-@app.route('/issuerauthorizer', methods=['POST'])
-def issuerauthorizer():
-    json_message = request.get_json(force=True)
-    message, error = parse_signed_request(json_message)
-
-    ONLY_GAIDS_CAN_SEND = [secFixedGaid]
-
-    mydb = mysql.connector.connect(host=myHost, user=myUser, passwd=myPasswd, database=myDatabase)
-    mycursor = mydb.cursor()
-    sql = "SELECT GAID FROM liquid_wine_gaids"
-    mycursor.execute(sql)
-    results = mycursor.fetchall()
-    mydb.close()
-
-    for row in results:
-        ONLY_GAIDS_CAN_SEND.append(row[0])
-
-    json_result = {
-      'result': True,
-      'error': '',
-    }
-
-    if message is None:
-        json_result = {
-          'result': False,
-          'error': error,
-        }
-
-    else:
-        i = 0
-        total_in = 0
-        for row in message['request']['inputs']:
-            total_in = total_in + row['amount']
-            if row['gaid'] not in ONLY_GAIDS_CAN_SEND:
-                json_result = {
-                  'result': False,
-                  'error': 'Unauthorized GAID (#{} input)'.format(i),
-                }
-            i = i + 1
-
-        i = 0
-        total_out = 0
-        for row in message['request']['outputs']:
-            total_out = total_out + row['amount']
-            if row['gaid'] not in ONLY_GAIDS_CAN_SEND:
-                json_result = {
-                  'result': False,
-                  'error': 'Unauthorized GAID (#{} output)'.format(i),
-                }
-            i = i + 1
-
-        if not total_in == total_out:
-            json_result = {
-              'result': False,
-              'error': 'Different amounts',
-            }
-
-    mydb = mysql.connector.connect(host=myHost, user=myUser, passwd=myPasswd, database=myDatabase)
-    mycursor = mydb.cursor()
-    sql = "INSERT IGNORE INTO liquid_wine_auth (Message, Result) VALUES (%s, %s)"
-    val = (json.dumps(json_message), json.dumps(json_result))
-    mycursor.execute(sql, val)
-    mydb.commit()
-    mydb.close()
-
-    return jsonify(json_result)
-
+@app.route('/logout', methods=['GET', 'POST'])
+def logout():
+    session['logged_in'] = False
+    return redirect(url_for('utxos'))
 
 @app.route('/')
 def home():
     tokens = []
-    token = requests.get('https://securities.blockstream.com/api/assets/df36e373-82c9-4412-a993-50c4ae12db6f', \
+    token = requests.get('https://amp-beta.blockstream.com/api/assets/{}'.format(secUuid), \
         headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()
     tokens.append(token)
+
+    logged = False
+    if 'logged_in' in session:
+        logged = session['logged_in']
+
     data = {
         'tokens': tokens,
+        'logged': logged,
     }
     return render_template('home', **data)
-
-
-@app.route('/authorizer')
-def authorizer():
-    command = request.args.get('command')
-    gaid = request.args.get('gaid')
-
-    validate = {'error': ''}
-
-    if command is not None:
-        if command=='add' and gaid is not None:
-            validate = requests.get('https://securities.blockstream.com/api/gaids/{}/validate'.format(gaid), \
-                headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()
-
-            if validate['is_valid']:
-                mydb = mysql.connector.connect(host=myHost, user=myUser, passwd=myPasswd, database=myDatabase)
-                mycursor = mydb.cursor()
-                sql = 'INSERT IGNORE INTO liquid_wine_gaids (GAID) VALUES ("{}")'.format(gaid)
-                val = (gaid)
-                mycursor.execute(sql, val)
-                mydb.commit()
-                mydb.close()
-
-        if command=='delete' and gaid is not None:
-            mydb = mysql.connector.connect(host=myHost, user=myUser, passwd=myPasswd, database=myDatabase)
-            mycursor = mydb.cursor()
-            sql = 'DELETE FROM liquid_wine_gaids WHERE GAID="{}"'.format(gaid)
-            mycursor.execute(sql)
-            mydb.commit()
-            mydb.close()
-
-    mydb = mysql.connector.connect(host=myHost, user=myUser, passwd=myPasswd, database=myDatabase)
-    mycursor = mydb.cursor()
-    sql = "SELECT Timestamp, Message, Result FROM liquid_wine_auth"
-    mycursor.execute(sql)
-    results = mycursor.fetchall()
-    mydb.close()
-
-    auths = [{'timestamp': row[0], 'request': row[1], 'result': row[2]} for row in results]
-
-    mydb = mysql.connector.connect(host=myHost, user=myUser, passwd=myPasswd, database=myDatabase)
-    mycursor = mydb.cursor()
-    sql = "SELECT Timestamp, GAID FROM liquid_wine_gaids"
-    mycursor.execute(sql)
-    results = mycursor.fetchall()
-    mydb.close()
-
-    gaids = [{'timestamp': row[0], 'gaid': row[1]} for row in results]
-
-    data = {
-        'gaids': gaids,
-        'auths': auths,
-        'gaid_validate': validate['error'],
-    }
-    return render_template('authorizer', **data)
 
 
 @app.route('/utxos')
@@ -212,46 +86,56 @@ def utxos():
 
     if command is not None:
         if command=='lock' and txid is not None and vout is not None:
-            res = requests.post('https://securities.blockstream.com/api/assets/df36e373-82c9-4412-a993-50c4ae12db6f/utxos/blacklist', \
+            res = requests.post('https://amp-beta.blockstream.com/api/assets/{}/utxos/blacklist'.format(secUuid), \
                 headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}, \
                 data=json.dumps([{'txid': txid, 'vout': int(vout)}])).json()
 
         if command=='unlock' and txid is not None and vout is not None:
-            res = requests.post('https://securities.blockstream.com/api/assets/df36e373-82c9-4412-a993-50c4ae12db6f/utxos/whitelist', \
+            res = requests.post('https://amp-beta.blockstream.com/api/assets/{}/utxos/whitelist'.format(secUuid), \
                 headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}, \
                 data=json.dumps([{'txid': txid, 'vout': int(vout)}])).json()
 
-    utxos = requests.get('https://securities.blockstream.com/api/assets/df36e373-82c9-4412-a993-50c4ae12db6f/utxos', \
+    utxos = requests.get('https://amp-beta.blockstream.com/api/assets/{}/utxos'.format(secUuid), \
         headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()
+
+    logged = False
+    if 'logged_in' in session:
+        logged = session['logged_in']
 
     data = {
         'utxos': utxos,
+        'logged': logged,
     }
     return render_template('utxos', **data)
 
 
 @app.route('/stats')
 def stats():
-    os.system('python flowchart.py -u "https://securities.blockstream.com" -t "{}" -a "df36e373-82c9-4412-a993-50c4ae12db6f" -f "flowchart"'.format(secToken))
+    os.system('python flowchart.py -u "https://amp-beta.blockstream.com" -t "{}" -a "{}" -f "flowchart"'.format(secToken, secUuid))
     os.system('mv flowchart.gv.png static/flowchart.png')
     os.system('rm flowchart.gv')
 
-    activities = requests.get('https://securities.blockstream.com/api/assets/df36e373-82c9-4412-a993-50c4ae12db6f/activities', \
+    activities = requests.get('https://amp-beta.blockstream.com/api/assets/{}/activities'.format(secUuid), \
         headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()
 
     random_list = [random.choice(string.ascii_letters + string.digits) for n in range(32)]
     random_str = "".join(random_list)
 
+    logged = False
+    if 'logged_in' in session:
+        logged = session['logged_in']
+
     data = {
         'random': random_str,
         'activities': activities,
+        'logged': logged,
     }
     return render_template('stats', **data)
 
 
 @app.route('/balance')
 def balance():
-    confirmed_balance = requests.get('https://securities.blockstream.com/api/assets/df36e373-82c9-4412-a993-50c4ae12db6f/balance', \
+    confirmed_balance = requests.get('https://amp-beta.blockstream.com/api/assets/{}/balance'.format(secUuid), \
         headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()['confirmed_balance']
 
     # convert to pandas dataframe
@@ -271,39 +155,53 @@ def balance():
     random_list = [random.choice(string.ascii_letters + string.digits) for n in range(32)]
     random_str = "".join(random_list)
 
+    logged = False
+    if 'logged_in' in session:
+        logged = session['logged_in']
+
     data = {
         'random': random_str,
         'confirmed_balance': confirmed_balance,
+        'logged': logged,
     }
     return render_template('balance', **data)
 
-@app.route('/status')
-def status():
-    print(betaToken)
-    beta_info = requests.get('https://securities-beta.blockstream.com/api/info', \
-        headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(betaToken)}).json()
-    beta_changelog = requests.get('https://securities-beta.blockstream.com/api/changelog', \
-        headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(betaToken)}).json()
-    prod_info = requests.get('https://securities.blockstream.com/api/info', \
-        headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()
-    prod_changelog = requests.get('https://securities.blockstream.com/api/changelog', \
-        headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()
-
-    data = {
-        'beta_info': json.dumps(beta_info, indent=4),
-        'beta_changelog': json.dumps(beta_changelog, indent=4),
-        'prod_info': json.dumps(prod_info, indent=4),
-        'prod_changelog': json.dumps(prod_changelog, indent=4),
-    }
-    return render_template('status', **data)
 
 @app.route('/about')
 def about():
+    logged = False
+    if 'logged_in' in session:
+        logged = session['logged_in']
+
     data = {
+        'logged': logged,
     }
     return render_template('about', **data)
 
 
+@app.route('/investor', methods=['GET', 'POST'])
+def investor():
+    form = True
+    status = ''
+
+    if request.method == 'POST':
+        form = False
+        #if request.form['username'] != adminUsername or request.form['password'] != adminPassword:
+        #confirmed_balance = requests.get('https://amp-beta.blockstream.com/api/assets/{}/balance'.format(secUuid), \
+        #    headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()['confirmed_balance']
+
+    logged = False
+    if 'logged_in' in session:
+        logged = session['logged_in']
+
+    data = {
+        'form': True,
+        'logged': logged,
+        'status': status,
+    }
+    return render_template('investor', **data)
+
 if __name__ == '__main__':
     app.import_name = '.'
+    app.config['SECRET_KEY'] = secrets.token_hex(16)
     socketio.run(app, host='0.0.0.0', port=5010)

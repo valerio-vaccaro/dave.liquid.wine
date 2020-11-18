@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="">
+  <meta name="author" content="Valerio Vaccaro">
+  <link rel="icon" href="">
+  <title>💶</title>
+  <link href="/static/bootstrap.min.css" rel="stylesheet">
+  <link href="/static/wine.css" rel="stylesheet">
+</head>
+<body>
+   <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+         <div class="navbar-header">
+           <a class="navbar-brand" href="/">🏠Home</a>
+           <a class="navbar-brand" href="/stats">🔍Activities</a>
+           <a class="navbar-brand" href="/balance">💶Balance</a>
+           <a class="navbar-brand" href="/utxos">📄UTXOs</a>
+           <a class="navbar-brand" href="/investor">👱New investor</a>
+           <a class="navbar-brand" href="/about">©Credits</a>
+           {{#logged}}
+           <a class="navbar-brand" href="/logout">✋Logout</a>
+           {{/logged}}
+           {{^logged}}
+           <a class="navbar-brand" href="/login">✋Login</a>
+           {{/logged}}
+         </div>
+      </div>
+   </nav>
+      <div class="container-fluid">
+         <br/><br/><br/><br/>
+         <div id="sl">
+            <br/><br/>
+            <div class="well">
+
+
+              {{#form}}
+              <h3>Register a new investor</h3>
+              <p>Register a new investor with a name and GAID.</p>
+              <form action="/investor" method="post">
+                 <div class="form-group row">
+                    <label for="address" class="col-sm-2 col-form-label">Name</label>
+                    <div class="col-sm-10">
+                       <input type="text" class="form-control" name="name" required="name" id="name" placeholder="name">
+                    </div>
+                 </div>
+                 <div class="form-group row">
+                    <label for="address" class="col-sm-2 col-form-label">GAID</label>
+                    <div class="col-sm-10">
+                       <input type="text" class="form-control" name="gaid" required="gaid" id="gaid" placeholder="gaid">
+                    </div>
+                 </div>
+                 <div class="form-group row">
+                    <div class="col-sm-10">
+                       <button type="submit" class="btn btn-primary">Register new investor!</button>
+                    </div>
+                 </div>
+              </form>
+
+              <h3>Add a new assignment</h3>
+              <p>Register a new assignment.</p>
+              <form action="/investor" method="post">
+                 <div class="form-group row">
+                    <label for="address" class="col-sm-2 col-form-label">Name</label>
+                    <div class="col-sm-10">
+                       <input type="text" class="form-control" name="name" required="name" id="name" placeholder="name">
+                    </div>
+                 </div>
+                 <div class="form-group row">
+                    <label for="address" class="col-sm-2 col-form-label">GAID</label>
+                    <div class="col-sm-10">
+                       <input type="text" class="form-control" name="gaid" required="gaid" id="gaid" placeholder="gaid">
+                    </div>
+                 </div>
+                 <div class="form-group row">
+                    <div class="col-sm-10">
+                       <button type="submit" class="btn btn-primary">Add new assignment!</button>
+                    </div>
+                 </div>
+              </form>
+              {{/form}}
+              {{status}}
+            </div>
+         </div>
+      </div>
+      </div>
+      <script src="/static/jquery.min.js"></script>
+      <script src="/static/bootstrap.min.js"></script>
+   </body>
+</html>

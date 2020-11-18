@@ -22,7 +22,7 @@ palettable==3.3.0
 pandas==0.24.2
 patsy==0.5.1
 Pillow==6.0.0
-pkg-resources==0.0.0
+#pkg-resources==0.0.0
 plotnine==0.5.1
 pyparsing==2.4.7
 PySocks==1.7.1
@@ -37,6 +37,6 @@ scipy==1.4.1
 six==1.12.0
 statsmodels==0.11.1
 urllib3==1.24.2
-wallycore @ https://github.com/ElementsProject/libwally-core/releases/download/release_0.7.1/wallycore-0.7.1-cp35-cp35m-linux_x86_64.whl
-#wallycore @ https://github.com/ElementsProject/libwally-core/releases/download/release_0.7.1/wallycore-0.7.1-cp37-cp37m-macosx_10_13_x86_64.whl
+#wallycore @ https://github.com/ElementsProject/libwally-core/releases/download/release_0.7.1/wallycore-0.7.1-cp35-cp35m-linux_x86_64.whl
+wallycore @ https://github.com/ElementsProject/libwally-core/releases/download/release_0.7.1/wallycore-0.7.1-cp37-cp37m-macosx_10_13_x86_64.whl
 Werkzeug==0.15.2

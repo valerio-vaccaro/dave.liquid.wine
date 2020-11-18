@@ -2,10 +2,10 @@
 <html lang="en">
    <head>
      <meta charset="utf-8">
-     <meta name="description" content="Liquid.wine">
-     <meta name="author" content="Sassicaioshi Freisamoto">
+     <meta name="description" content="">
+     <meta name="author" content="Valerio Vaccaro">
      <link rel="icon" href="">
-     <title>🍷 Liquid wine</title>
+     <title>💶</title>
      <link href="/static/bootstrap.min.css" rel="stylesheet">
      <link href="/static/wine.css" rel="stylesheet">
    </head>
@@ -13,15 +13,18 @@
       <nav class="navbar navbar-inverse navbar-fixed-top">
          <div class="container">
             <div class="navbar-header">
-              <a class="navbar-brand" href="/">Home</a>
-              <a class="navbar-brand" href="/status">Status</a>
-              <a class="navbar-brand" href="/stats">Activities</a>
-              <a class="navbar-brand" href="/balance">Balance</a>
-              <a class="navbar-brand" href="/utxos">UTXOs</a>
-              <a class="navbar-brand" href="/authorizer">Authorizer</a>
-              <a class="navbar-brand" href="https://blockstream.com/liquid/securities/" target="_blank">Liquid securities</a>
-              <a class="navbar-brand" href="https://blockstream.info/liquid/" target="_blank">Explorer</a>
-              <a class="navbar-brand" href="/about">Credits</a>
+              <a class="navbar-brand" href="/">🏠Home</a>
+              <a class="navbar-brand" href="/stats">🔍Activities</a>
+              <a class="navbar-brand" href="/balance">💶Balance</a>
+              <a class="navbar-brand" href="/utxos">📄UTXOs</a>
+              <a class="navbar-brand" href="/investor">👱New investor</a>
+              <a class="navbar-brand" href="/about">©Credits</a>
+              {{#logged}}
+              <a class="navbar-brand" href="/logout">✋Logout</a>
+              {{/logged}}
+              {{^logged}}
+              <a class="navbar-brand" href="/login">✋Login</a>
+              {{/logged}}
             </div>
          </div>
       </nav>

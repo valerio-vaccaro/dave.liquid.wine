@@ -93,19 +93,23 @@
               <table class="table">
                 <thead>
                   <tr>
+                    <th scope="col">Id</th>
                     <th scope="col">Investor</th>
                     <th scope="col">Amount</th>
                     <th scope="col">Address</th>
                     <th scope="col">Distributed?</th>
+                    <th scope="col">Command</th>
                   </tr>
                 </thead>
                 <tbody>
                   {{#assignments}}
                   <tr>
+                    <td>{{id}}</td>
                     <td>{{registered_user}}</td>
                     <td>{{amount}}</td>
                     <td>{{receiving_address}}</td>
                     <td>{{is_distributed}}</td>
+                    <td><a href="/investor?command=delete_assignment&id={{id}}"><button type="button" class="btn btn-danger">Remove</button></a></td>
                     </tr>
                   {{/assignments}}
                 </tbody>
@@ -139,6 +143,9 @@
               </form>
               {{/form}}
               {{status}}
+              {{/logged}}
+              {{^logged}}
+              <p>You need to log in!</p>
               {{/logged}}
             </div>
          </div>

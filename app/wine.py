@@ -194,7 +194,8 @@ def investor():
         elif request.form['command']  == 'assignment':
             status = requests.post('https://amp-beta.blockstream.com/api/assets/{}/assignments/create'.format(secUuid), \
                 headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}, \
-                data=json.dumps({"assignments": [{"registered_user": request.form['id'], "amount": request.form['amount'], "ready_for_distribution": True, "vesting_timestamp": None}]})).json()
+                data=json.dumps({"assignments": [{"registered_user": int(request.form['id']), "amount": int(request.form['amount']), "ready_for_distribution": True, "vesting_timestamp": None}]})).json()
+
     else:
         command = request.args.get('command')
         id = request.args.get('id')
@@ -203,6 +204,9 @@ def investor():
                 headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()
         elif command == 'remove':
             status = requests.put('https://amp-beta.blockstream.com/api/categories/23/registered_users/{}/remove'.format(id), \
+                headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()
+        elif command == 'delete_assignment':
+            status = requests.delete('https://amp-beta.blockstream.com/api/assets/{}/assignments/{}/delete'.format(secUuid, id), \
                 headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()
 
     investors = []
@@ -218,7 +222,7 @@ def investor():
     res = requests.get('https://amp-beta.blockstream.com/api/assets/{}/assignments'.format(secUuid), \
         headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()
     for r in res:
-        assignments.append({'registered_user':r['registered_user'], 'amount':r['amount'], 'receiving_address':r['receiving_address'], 'is_distributed':r['is_distributed']})
+        assignments.append({'id':r['id'], 'registered_user':r['registered_user'], 'amount':r['amount'], 'receiving_address':r['receiving_address'], 'is_distributed':r['is_distributed']})
 
     logged = False
     if 'logged_in' in session:
@@ -229,6 +233,7 @@ def investor():
         'logged': logged,
         'status': status,
         'investors': investors,
+        'assignments': assignments,
     }
     return render_template('investor', **data)
 

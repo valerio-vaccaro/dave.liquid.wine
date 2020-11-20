@@ -198,16 +198,21 @@ def investor():
     else:
         command = request.args.get('command')
         id = request.args.get('id')
-        #if command == '':
-
-        #elif command == '':
-
+        if command == 'add':
+            status = requests.put('https://amp-beta.blockstream.com/api/categories/23/registered_users/{}/add'.format(id), \
+                headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()
+        elif command == 'remove':
+            status = requests.put('https://amp-beta.blockstream.com/api/categories/23/registered_users/{}/remove'.format(id), \
+                headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()
 
     investors = []
     res = requests.get('https://amp-beta.blockstream.com/api/registered_users', \
         headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()
+    cat = requests.get('https://amp-beta.blockstream.com/api/categories/23', \
+        headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()
     for r in res:
-        investors.append({'id':r['id'], 'name':r['name'], 'gaid':r['GAID']})
+        kyc = (r['id'] in cat['registered_users'])
+        investors.append({'id':r['id'], 'name':r['name'], 'gaid':r['GAID'], 'kyc':kyc})
 
     assignments = []
     res = requests.get('https://amp-beta.blockstream.com/api/assets/{}/assignments'.format(secUuid), \

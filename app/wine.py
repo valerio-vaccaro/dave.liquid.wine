@@ -186,9 +186,34 @@ def investor():
 
     if request.method == 'POST':
         form = False
-        #if request.form['username'] != adminUsername or request.form['password'] != adminPassword:
-        #confirmed_balance = requests.get('https://amp-beta.blockstream.com/api/assets/{}/balance'.format(secUuid), \
-        #    headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()['confirmed_balance']
+        if request.form['command']  == 'investor':
+            status = requests.post('https://amp-beta.blockstream.com/api/registered_users/add', \
+                headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}, \
+                data=json.dumps({'name': request.form['name'], 'GAID': request.form['gaid'], 'is_company': False})).json()
+
+        elif request.form['command']  == 'assignment':
+            status = requests.post('https://amp-beta.blockstream.com/api/assets/{}/assignments/create'.format(secUuid), \
+                headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}, \
+                data=json.dumps({"assignments": [{"registered_user": request.form['id'], "amount": request.form['amount'], "ready_for_distribution": True, "vesting_timestamp": None}]})).json()
+    else:
+        command = request.args.get('command')
+        id = request.args.get('id')
+        #if command == '':
+
+        #elif command == '':
+
+
+    investors = []
+    res = requests.get('https://amp-beta.blockstream.com/api/registered_users', \
+        headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()
+    for r in res:
+        investors.append({'id':r['id'], 'name':r['name'], 'gaid':r['GAID']})
+
+    assignments = []
+    res = requests.get('https://amp-beta.blockstream.com/api/assets/{}/assignments'.format(secUuid), \
+        headers={'content-type': 'application/json', 'Authorization': 'token {}'.format(secToken)}).json()
+    for r in res:
+        assignments.append({'registered_user':r['registered_user'], 'amount':r['amount'], 'receiving_address':r['receiving_address'], 'is_distributed':r['is_distributed']})
 
     logged = False
     if 'logged_in' in session:
@@ -198,6 +223,7 @@ def investor():
         'form': True,
         'logged': logged,
         'status': status,
+        'investors': investors,
     }
     return render_template('investor', **data)
 
